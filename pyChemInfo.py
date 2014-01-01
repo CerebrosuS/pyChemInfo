@@ -20,6 +20,8 @@ import sys
 import time
 import re
 import getopt
+import os
+import os.path
 
 import abc
 from abc import abstractmethod
@@ -321,21 +323,26 @@ def getODBClasses():
 
 def main():
   try:
-    opts, args = getopt.getopt(sys.argv[1:], "ho:n:lv", ["help", "output=", "names=", "list-databases"])
+    opts, args = getopt.getopt(sys.argv[1:], "hfo:n:lv", ["help", "output=", \
+        "names=", "list-databases"])
   except getopt.GetoptError as error:
     print(str(error))
     usage()
     sys.exit(2)
 
   output = None
+  forceOutput = False
   names = None
   verbose = False
   for o, a in opts:
     if o == "-v":
       verbose = True
+    elif o in ("-f"):
+      forceOutput = True
     elif o in ("-l", "--list-databases"):
       print("List of available Online Database Modules: ", end="")
-      print(",".join([chemInfo().name() for chemInfo in ChemInfo().getOnlineDatabases()]))
+      print(",".join([chemInfo().name() for chemInfo in \
+        ChemInfo().getOnlineDatabases()]))
       sys.exit(0)
     elif o in ("-n", "--names"):
       names = a.split(",")
@@ -353,6 +360,7 @@ def main():
     sys.exit(2)
 
   # Search for all names and compounds.
+  compounds = None
   for name in names:
     chemInfo = ChemInfo()
     compounds = chemInfo.search(name, True)
@@ -362,15 +370,31 @@ def main():
       print("Cannot find '%s' in %s." % (name, odb.name()))
       continue
 
-    for compound in compounds:
-      # Print informations about the first compound.
-      print("---------")
-      print("Database: %s" % compound.database)
-      print("Name:     %s" % compound.name)
-      print("CSID:     %s" % compound.csid)
-      print("SMILES:   %s" % compound.smiles)
+  print("")
+  for compound in compounds:
+    # Print informations about the first compound.
+    print("---------")
+    print("Database: %s" % compound.database)
+    print("Name:     %s" % compound.name)
+    print("CSID:     %s" % compound.csid)
+    print("SMILES:   %s" % compound.smiles)
+  print("---------\n")
 
-  print("---------")
+  # Write the output to a file if file name was given.
+  if output is not None:
+    if os.path.exists(output) is True and forceOutput is False:
+      print("The file already exist. I won't write any data.")
+    else:
+      outFile = open(output, "w")
+      for compound in compounds:
+        # Print informations about the first compound.
+        outFile.write("---------\n")
+        outFile.write("Database: %s\n" % compound.database)
+        outFile.write("Name:     %s\n" % compound.name)
+        outFile.write("CSID:     %s\n" % compound.csid)
+        outFile.write("SMILES:   %s\n" % compound.smiles)
+      outFile.write("---------")
+      outFile.close()
 
 # Main entry point from command line calling.
 if __name__ == "__main__":
